@@ -1,0 +1,59 @@
+#!/bin/bash
+
+### check_ubuntu Usage:help
+#
+# A script to check whether the Ubuntu install is a recent LTS, presuming Canonical sticks to its "even-numbered year in April is an LTS" convention.
+#
+# Designed for use with nagios.
+#
+# Return codes:
+#
+#	0 - the system is a recent Ubuntu LTS release
+#	1 - the system is an aging Ubuntu LTS release
+#	2 - the system is not a supported Ubuntu LTS release
+#	3 - the system is not a Ubuntu derivative
+#
+# This script was created under the assumption that the server to be checked is long-lived, and thus requires monitoring of the age of its release.
+#
+# Non-LTS distributions, even if recent, are not considered safe for long-term use, and are automatcally a critical failure; you can use this script to detect when a server was "upgraded" to non-LTS.
+#
+# If you use non-LTS with a regular destruction/re-creation automation, you should not need this check.
+#
+###/doc
+
+u_release_file=/etc/lsb-release
+
+# Non-ubuntu - unknowable
+[[ -f "$u_release_file" ]] || {
+	echo "Cannot find $u_release_file - is this really a Ubuntu system?"
+	exit 3
+}
+
+. "$u_release_file"
+
+if [[ "$DISTRIB_ID" != "Ubuntu" ]]; then
+	echo "Distribution is $DISTRIB_ID , not Ubuntu"
+	exit 3
+fi
+
+major=${DISTRIB_RELEASE%.*}
+minor=${DISTRIB_RELEASE#*.}
+year2=$(date +%y)
+
+if [[ $(( major / 2 * 2 )) != $major ]]; then
+	# non-LTS. Never desirable, even if recent
+	exit 2
+fi
+
+if [[ "$minor" = 04 ]]; then
+	if [[ $(( year2 - major )) -le 2 ]]; then
+		echo "$major.$minor is a recent LTS release."
+		exit 0
+	elif [[ $(( year2 - major )) -le 4 ]]; then
+		echo "$major.$minor is not a recent LTS release."
+		exit 1 # aging LTS
+	fi
+fi
+
+echo "$major.$minor is not an LTS, or is too old."
+exit 2
