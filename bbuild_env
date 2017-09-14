@@ -1,0 +1,2 @@
+BUILDOUTD=./
+BBFILES=(src/add_plugin.sh)
