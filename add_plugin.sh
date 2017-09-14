@@ -226,8 +226,12 @@ function filefrom {
 	return 1
 }
 
+NRPE_CONFIG=/etc/nagios/nrpe.cfg
+
 main() {
 	[[ "$UID" = 0 ]] || faile "You need to be root to run this script"
+
+	[[ -f "$NRPE_CONFIG" ]] || faile "Please install nagios-nrpe-server"
 
 	cd "$(dirname "$0")"
 
@@ -236,9 +240,13 @@ main() {
 
 	[[ -n "$plugin" ]] || faile "No such plugin '$1'"
 
-	cp "$plugin" /usr/lib/nagios/plugins
+	cp "$plugin" "$NRPE_CONFIG/"
 
-	[[ -f "/etc/nagios/nrpe.cfg" ]] && echo "[$pluginname]=$plugin $*" | tee -a /etc/nagios/nrpe.cfg || :
+	info "Task in $NRPE_CONFIG:"
+	grep -P "^[$pluginname]="  "NRPE_CONFIG" || {
+		echo "[$pluginname]=$plugin $*"| tee -a "$NRPE_CONFIG"
+
+	}
 }
 
 main "$@"
